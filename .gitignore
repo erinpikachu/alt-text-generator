@@ -1,0 +1,20 @@
+# Secrets
+.env
+
+# Environments
+venv/
+ENV/
+env/
+.venv/
+
+# Python cache (keeps your repo clean)
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Data (Optional: if you don't want your raw CSVs on GitHub)
+wordpress_media.csv
+wordpress_media_fixed.csv
+
+# Mac system files
+.DS_Store
