@@ -57,9 +57,8 @@ Export your WordPress media library as a CSV with these columns:
 
 Place the file in the project root as `wordpress_media.csv`.
 
----
 
-## Usage
+### 5. Running the stript
 
 ```bash
 python alt_text.py
@@ -75,20 +74,42 @@ Progress: 14.4% [45/312] Processing: tlc-contact-hero-bg-d...
 
 Output is saved to `wordpress_media_fixed.csv`.
 
+### 6. Importing Back to WordPress
+
+Upload the script below and the `wordpress_media_fixed.csv` to the root of your WordPress install. o import the alt text into wordpress
+
+**How to run it:**
+
+1. Upload the script to your server.
+2. Make it executable: `chmod +x import_images.sh`
+3. Run it: `./import_images.sh`
+
+```
+#!/bin/bash
+
+# Path to your CSV file
+CSV_FILE="wordpress_media_fixed.csv"
+
+# Check if WP-CLI is installed
+if ! command -v wp &> /dev/null; then
+    echo "WP-CLI could not be found. Please install it first."
+    exit
+fi
+
+# Loop through CSV (using awk to handle quotes properly)
+awk -F',' 'NR > 1 {print $3"|"$4"|"$2}' "$CSV_FILE" | while IFS="|" read -r url alt title; do
+    echo "Importing: $url"
+    wp media import "$url" --alt="$alt" --title="$title" --skip-copy
+done
+```
+
 ---
 
 ## Notes
-
-- **Rate limiting:** The script pauses 4 seconds between API calls to stay within the Gemini free tier limits (15 requests/minute). On the free tier, ~300 images takes roughly 20–30 minutes.
+.
 - **SVG files:** Gemini cannot process SVG vector files. These rows will receive an error value in the output — review and handle them manually.
-- **Re-running:** The script skips rows that already have alt text, so it is safe to stop and restart. Rows where generation failed (containing `"Error:"`) will not be automatically retried — clear those cells manually before re-running if needed.
+- **Re-running:** The script skips rows that already have alt text, so it is safe to stop and restart. 
 - **Progress saves:** The CSV is saved every 50 processed images, so you won't lose more than 50 entries if the script is interrupted.
-
----
-
-## Importing Back to WordPress
-
-After running the script, use a plugin like **WP All Import** or a custom WP-CLI script to update the `_wp_attachment_image_alt` postmeta field for each attachment using the `ID` and `alt_text` columns from `wordpress_media_fixed.csv`.
 
 ---
 
