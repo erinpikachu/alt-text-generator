@@ -87,19 +87,30 @@ Upload the script below and the `wordpress_media_fixed.csv` to the root of your 
 ```
 #!/bin/bash
 
-# Path to your CSV file
-CSV_FILE="wordpress_media_fixed.csv"
+CSV="wordpress_media_fixed.csv"
 
-# Check if WP-CLI is installed
-if ! command -v wp &> /dev/null; then
-    echo "WP-CLI could not be found. Please install it first."
-    exit
-fi
+# Loop through CSV
+tail -n +2 "$CSV" | while IFS=',' read -r ID post_title guid alt_text; do
 
-# Loop through CSV (using awk to handle quotes properly)
-awk -F',' 'NR > 1 {print $3"|"$4"|"$2}' "$CSV_FILE" | while IFS="|" read -r url alt title; do
-    echo "Importing: $url"
-    wp media import "$url" --alt="$alt" --title="$title" --skip-copy
+    # Clean variables and get just the filename (e.g., theme-image.jpg)
+    clean_guid=$(echo "$guid" | tr -d '\r' | sed 's/^"//;s/"$//')
+    filename=$(basename "$clean_guid")
+    clean_alt=$(echo "$alt_text" | tr -d '\r' | sed 's/^"//;s/"$//')
+
+    echo "Searching for image: $filename"
+
+    # 1. Find the ID of the existing attachment by searching for the filename
+    # We look for the filename in the 'guid' column of the database
+    ATTACHMENT_ID=$(wp post list --post_type=attachment --name="$(basename "$filename" .${filename##*.})" --format=ids)
+
+    if [ -n "$ATTACHMENT_ID" ]; then
+        # 2. Update the Alt Text for that ID
+        wp post meta update "$ATTACHMENT_ID" _wp_attachment_image_alt "$clean_alt"
+        echo "✅ Updated Alt Text for ID: $ATTACHMENT_ID"
+    else
+        echo "❌ Could not find image in library: $filename"
+    fi
+
 done
 ```
 
